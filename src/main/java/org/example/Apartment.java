@@ -7,6 +7,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class Apartment {
 
+    private String id;
     private int amountOfRooms;
     private double sqr;
     private String flour;

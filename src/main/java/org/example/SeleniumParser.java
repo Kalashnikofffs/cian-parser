@@ -1,9 +1,8 @@
 package org.example;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,26 +14,88 @@ import org.openqa.selenium.chrome.ChromeOptions;
 
 public class SeleniumParser {
 
+    private final String login;
+    private final String password;
+
+    public SeleniumParser(String login, String password) {
+        this.login = login;
+        this.password = password;
+    }
+
+    //test account
+//    private final String login = "xohoke9968@godpeed.com";
+//    private final String password = "Qwerty123456";
+
     public List<Apartment> getApartments(String url) throws InterruptedException {
-        System.setProperty("webdriver.chrome.driver", "src/main/resources/chromedriver.exe");
-
-        Map<String, Object> prefs = new HashMap<>();
-        prefs.put("profile.managed_default_content_settings.images", 2);
+        List<Apartment> apartmentsList = new ArrayList<>();
+        List<String> links = new ArrayList<>();
+        System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
         ChromeOptions op = new ChromeOptions();
-        op.setExperimentalOption("prefs", prefs);
+        op.setExperimentalOption("excludeSwitches", "disable-popup-blocking");
+        // set up webdriver
+        WebDriver driver = getWebDriver(url);
 
-        WebDriver driver = new ChromeDriver();
-        driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
-        driver.manage().window().maximize();
-        driver.get(url);
+        //check if there any pop ups and close it
+        checkIfAnyIframes(driver);
 
-        WebElement cookieBar = driver.findElement(By.cssSelector("div[data-name=CookieAgreementBar]"));
-        cookieBar.findElement(By.tagName("button")).click();
+        //accept cookies
+        acceptCookies(driver);
         Thread.sleep(200);
 
-        List<Apartment> apartmentsList = new ArrayList<>();
+        // check is user is logged in or not and log in if not
+        logIn(driver);
+
         List<WebElement> divs = driver.findElements(By.cssSelector("article[data-name=CardComponent]"));
 
+        iterateDivsAndParseApartments(apartmentsList, divs, links);
+
+        openLinksAndAddToFavoriteAndAddComments(url, links, driver);
+
+        driver.close();
+        return apartmentsList;
+    }
+
+    private void openLinksAndAddToFavoriteAndAddComments(String url, List<String> links, WebDriver driver) throws InterruptedException {
+        for (String link : links) {
+            driver.get(link);
+            checkIfThereA3DTourOnThePageAndClosePopUp(driver);
+            Thread.sleep(1000);
+            driver.findElement(By.cssSelector("div[data-name=CommentsButton]")).click();
+            String xpathString = "//div[contains(@class, 'comment')]";
+            List<WebElement> elements = driver.findElements(By.xpath(xpathString));
+            WebElement commentElement = elements.get(1);
+            WebElement textarea = commentElement.findElement(By.tagName("textarea"));
+            Thread.sleep(1000);
+            String price = driver.findElement(By.cssSelector("span[itemprop=price")).getText();
+            textarea.clear();
+            textarea.sendKeys(getId(link) + " - " + price + " " + LocalDate.now());
+            List<WebElement> buttons = driver.findElements(By.tagName("button"));
+            for (WebElement button : buttons) {
+                if (button.getText().equalsIgnoreCase("Сохранить")) {
+                    button.click();
+                    break;
+                }
+            }
+        }
+    }
+
+    private void checkIfThereA3DTourOnThePageAndClosePopUp(WebDriver driver) {
+        if (driver.findElements(By.cssSelector("div[data-name=TourModal]")).size() > 0) {
+            List<WebElement> elements = driver.findElements(By.cssSelector("div[data-name=TourModal"));
+            for (WebElement element : elements) {
+                WebElement button = element.findElement(By.tagName("button"));
+                button.click();
+                break;
+            }
+        }
+    }
+
+    private void acceptCookies(WebDriver driver) {
+        WebElement cookieBar = driver.findElement(By.cssSelector("div[data-name=CookieAgreementBar]"));
+        cookieBar.findElement(By.tagName("button")).click();
+    }
+
+    private void iterateDivsAndParseApartments(List<Apartment> apartmentsList, List<WebElement> divs, List<String> links) throws InterruptedException {
         for (WebElement div : divs) {
             String textPrice = div.findElement(By.cssSelector("span[data-mark=MainPrice]")).getText();
             WebElement areaElement = div.findElement(By.cssSelector("div[data-name=LinkArea]"));
@@ -50,17 +111,72 @@ public class SeleniumParser {
             double sqr = getSqr(titleComponentSpan);
             long price = getPrice(textPrice);
             String link = div.findElement(By.cssSelector("a")).getAttribute("href");
+            String id = getId(link);
+            links.add(link);
             WebElement button = div.findElement(By.cssSelector("button[data-mark=PhoneButton]"));
             button.click();
             Thread.sleep(10);
             String phoneNumber = div.findElement(By.cssSelector("span[data-mark=PhoneValue]")).getText();
             Apartment apartment = new Apartment(
-                    amountOfRooms, sqr, flour, address.toString(), price, link, phoneNumber
+                    id, amountOfRooms, sqr, flour, address.toString(), price, link, phoneNumber
             );
             apartmentsList.add(apartment);
         }
-        driver.close();
-        return apartmentsList;
+    }
+
+    private void checkIfAnyIframes(WebDriver driver) {
+        try {
+            if (driver.findElements(By.tagName("iframe")).size() > 0) {
+                for (WebElement iframe : driver.findElements(By.tagName("iframe"))) {
+                    iframe.findElement(By.tagName("button")).click();
+                    break;
+                }
+            }
+        } catch (Exception ex) {
+
+        }
+    }
+
+    private WebDriver getWebDriver(String url) {
+        WebDriver driver = new ChromeDriver();
+        driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
+        driver.manage().window().maximize();
+        driver.get(url);
+        return driver;
+    }
+
+    private void logIn(WebDriver driver) throws InterruptedException {
+        if (isLogInPossible(driver)) {
+            driver.findElement(By.cssSelector("a[id=login-btn]")).click();
+            Thread.sleep(500);
+            if (driver.findElements(By.cssSelector("button[data-mark=SwitchToEmailAuth]")).size() > 0) {
+                driver.findElement(By.cssSelector("button[data-mark=SwitchToEmailAuth]")).click();
+                Thread.sleep(500);
+            }
+            driver.findElement(By.cssSelector("input[name=username]")).sendKeys(login);
+            Thread.sleep(500);
+            driver.findElement(By.cssSelector("button[data-mark=ContinueAuthBtn]")).click();
+            Thread.sleep(500);
+            driver.findElement(By.cssSelector("input[name=password]")).sendKeys(password);
+            Thread.sleep(500);
+            driver.findElement(By.cssSelector("button[data-mark=ContinueAuthBtn]")).click();
+            Thread.sleep(500);
+        }
+    }
+
+    private String getId(String link) {
+        String regex = "/\\d+/";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(link);
+        String id = "";
+        while (matcher.find()) {
+            id = link.substring(matcher.start() + 1, matcher.end() - 1);
+        }
+        return id;
+    }
+
+    private boolean isLogInPossible(WebDriver driver) {
+        return driver.findElements(By.cssSelector("a[id=login-btn]")).size() > 0;
     }
 
     private String getNormalString(String s2) {

@@ -36,7 +36,7 @@ public class Parser {
                 String flour = getFlour(span);
                 double sqr = getSqr(span);
                 long price = getPrice(priceElement);
-                Apartment apartment = new Apartment(amountOfRooms, sqr, flour, address, price, link, null);
+                Apartment apartment = new Apartment("", amountOfRooms, sqr, flour, address, price, link, null);
                 apartmentList.add(apartment);
 //                System.out.println(apartment);
                 Elements phoneNumber = element.getElementsByTag("button");
