@@ -1,26 +1,19 @@
 package org.example;
 
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import org.apache.poi.ss.usermodel.BorderStyle;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.ss.usermodel.HorizontalAlignment;
-import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.VerticalAlignment;
-import org.apache.poi.xssf.usermodel.XSSFFont;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class ExcelWriter {
 
-    public static void writeToFile(List<Apartment> apartments) throws IOException {
+    public static void writeToFile(String directory, List<Apartment> apartments) throws IOException {
 
         XSSFWorkbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Apartments");
@@ -31,13 +24,14 @@ public class ExcelWriter {
         CellStyle headerStyle = workbook.createCellStyle();
         setUpHeaderCellStyle(workbook, headerStyle);
 
-        createCell(header, 0, "Адрес", headerStyle);
-        createCell(header, 1, "Этаж", headerStyle);
-        createCell(header, 2, "Кол-во комнат", headerStyle);
-        createCell(header, 3, "Площадь", headerStyle);
-        createCell(header, 4, "Цена", headerStyle);
-        createCell(header, 5, "Ссылка", headerStyle);
-        createCell(header, 6, "Телефон", headerStyle);
+        createCell(header, 0, "Id", headerStyle);
+        createCell(header, 1, "Адрес", headerStyle);
+        createCell(header, 2, "Этаж", headerStyle);
+        createCell(header, 3, "Кол-во комнат", headerStyle);
+        createCell(header, 4, "Площадь", headerStyle);
+        createCell(header, 5, "Цена", headerStyle);
+        createCell(header, 6, "Ссылка", headerStyle);
+        createCell(header, 7, "Телефон", headerStyle);
 
         CellStyle style = workbook.createCellStyle();
         style.setWrapText(true);
@@ -46,15 +40,16 @@ public class ExcelWriter {
         for (int i = 0; i < apartments.size(); i++) {
             Apartment apartment = apartments.get(i);
             Row row = sheet.createRow(rowNumber++);
-            createCell(row, 0, apartment.getAddress(), style);
-            createCell(row, 1, apartment.getFlour(), style);
-            createCell(row, 2, String.valueOf(apartment.getAmountOfRooms()), style);
-            createCell(row, 3, String.valueOf(apartment.getSqr()), style);
-            createCell(row, 4, String.valueOf(apartment.getPrice()), style);
-            createCell(row, 5, apartment.getLink(), style);
-            createCell(row, 6, apartment.getPhoneNumber(), style);
+            createCell(row, 0, apartment.getId(), style);
+            createCell(row, 1, apartment.getAddress(), style);
+            createCell(row, 2, apartment.getFlour(), style);
+            createCell(row, 3, String.valueOf(apartment.getAmountOfRooms()), style);
+            createCell(row, 4, String.valueOf(apartment.getSqr()), style);
+            createCell(row, 5, String.valueOf(apartment.getPrice()), style);
+            createCell(row, 6, apartment.getLink(), style);
+            createCell(row, 7, apartment.getPhoneNumber(), style);
         }
-        Path path = Paths.get("src/main/resources/apartments.xlsx");
+        Path path = Paths.get(directory, "/apartments.xlsx");
 
         if (!Files.exists(path)) {
             Files.createFile(path);

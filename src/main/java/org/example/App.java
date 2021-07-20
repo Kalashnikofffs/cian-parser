@@ -1,6 +1,7 @@
 package org.example;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -14,10 +15,12 @@ public class App {
         String username = scanner.nextLine();
         System.out.println("Please enter password:");
         String password = scanner.nextLine();
+        System.out.println("Please enter directory where we should save excel document:");
+        String directory = scanner.nextLine();
 
         SeleniumParser parser = new SeleniumParser(username, password);
         List<Apartment> apartments = parser.getApartments(link);
-        ExcelWriter.writeToFile(apartments);
+        ExcelWriter.writeToFile(directory, apartments);
 
     }
 }
