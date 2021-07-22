@@ -3,10 +3,13 @@ package org.example;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.poi.ss.formula.functions.T;
 import org.openqa.selenium.By;
+import org.openqa.selenium.Cookie;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -16,6 +19,10 @@ public class SeleniumParser {
 
     private final String login;
     private final String password;
+    Set<Cookie> cookieSet;
+    int counter = 0;
+    List<WebDriver> driverList = new ArrayList<>();
+    List<Thread> threadList = new ArrayList<>();
 
     public SeleniumParser(String login, String password) {
         this.login = login;
@@ -31,7 +38,7 @@ public class SeleniumParser {
         List<String> links = new ArrayList<>();
         System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
         ChromeOptions op = new ChromeOptions();
-        op.setExperimentalOption("excludeSwitches", "disable-popup-blocking");
+//        op.setExperimentalOption("excludeSwitches", "disable-popup-blocking");
         // set up webdriver
         WebDriver driver = getWebDriver(url);
 
@@ -52,20 +59,50 @@ public class SeleniumParser {
         openLinksAndAddToFavoriteAndAddComments(url, links, driver);
 
         driver.close();
+
+
         return apartmentsList;
     }
 
-    private void openLinksAndAddToFavoriteAndAddComments(String url, List<String> links, WebDriver driver) throws InterruptedException {
+    private void openLinksAndAddToFavoriteAndAddComments(String url, List<String> links, WebDriver oldDriver) {
+        for (int i = 0; i < 8; i++) {
+            threadList.add(
+                    new Thread(() -> {
+                        driverList.add(getWebDriver(links.get(counter++)));
+                    }));
+
+        }
+        for (Thread tr:
+             threadList) {
+            tr.start();
+        }
         for (String link : links) {
+
+            WebDriver driver = driverList.get(links.indexOf(link));
+            cookieSet = oldDriver.manage().getCookies();
             driver.get(link);
+            for (Cookie ck :
+                    cookieSet) {
+                driver.manage().addCookie(ck);
+            }
+            driver.get(link);
+
             checkIfThereA3DTourOnThePageAndClosePopUp(driver);
-            Thread.sleep(1000);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             driver.findElement(By.cssSelector("div[data-name=CommentsButton]")).click();
             String xpathString = "//div[contains(@class, 'comment')]";
             List<WebElement> elements = driver.findElements(By.xpath(xpathString));
             WebElement commentElement = elements.get(1);
             WebElement textarea = commentElement.findElement(By.tagName("textarea"));
-            Thread.sleep(1000);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             String price = driver.findElement(By.cssSelector("span[itemprop=price")).getText();
             textarea.clear();
             textarea.sendKeys(getId(link) + " - " + price + " " + LocalDate.now());
@@ -76,8 +113,12 @@ public class SeleniumParser {
                     break;
                 }
             }
+            driver.close();
         }
+        ;
+
     }
+
 
     private void checkIfThereA3DTourOnThePageAndClosePopUp(WebDriver driver) {
         if (driver.findElements(By.cssSelector("div[data-name=TourModal]")).size() > 0) {

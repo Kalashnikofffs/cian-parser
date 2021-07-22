@@ -10,13 +10,13 @@ public class App {
 
         System.out.println("Please enter link: ");
         Scanner scanner = new Scanner(System.in);
-        String link = scanner.nextLine();
+        String link = "https://spb.cian.ru/cat.php?deal_type=sale&engine_version=2&offer_type=flat&region=2&room1=1&room2=1&room3=1";
         System.out.println("Please enter username: ");
-        String username = scanner.nextLine();
+        String username = "xohoke9968@godpeed.com";
         System.out.println("Please enter password:");
-        String password = scanner.nextLine();
+        String password = "Qwerty123456";
         System.out.println("Please enter directory where we should save excel document:");
-        String directory = scanner.nextLine();
+        String directory = "C:\\Users\\skalashn\\Screenshots";
 
         SeleniumParser parser = new SeleniumParser(username, password);
         List<Apartment> apartments = parser.getApartments(link);
